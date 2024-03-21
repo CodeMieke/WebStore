@@ -1,0 +1,51 @@
+name: WebStore-cicd
+
+on:
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: 'WebApp21032024'
+
+jobs:
+  build:
+    name: 'Build and Publish .NET Web App'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.5.3      
+
+      - name: 'Restore'
+        run: dotnet restore
+
+      - name: 'Build'
+        run: dotnet build --configuration Release
+
+      - name: 'Publish'
+        run: dotnet publish --configuration Release -o ./webstore
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: WebStore
+          path: ./webstore
+
+  deploy: 
+    name: Deploy to Web App
+    runs-on: windows-latest
+    needs: build
+    environment:
+      name: webstore-prod
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: WebStore
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with: 
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
